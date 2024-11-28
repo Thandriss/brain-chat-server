@@ -1,0 +1,148 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="1-create-user-table" author="Iana Makhonko">
+        <createTable tableName="users">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="password" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_state" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="3-create-chats-table" author="Iana Makhonko">
+        <createTable tableName="chats">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="chat_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="topic" type="VARCHAR(1000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uuid-chat" type="VARCHAR(1000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="2-create-messages-table" author="Iana Makhonko">
+        <createTable tableName="messages">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="chat_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="messages" baseColumnNames="user_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_user_message"/>
+        <addForeignKeyConstraint baseTableName="messages" baseColumnNames="chat_id"
+                                 referencedTableName="chats" referencedColumnNames="id"
+                                 constraintName="fk_chat_message"/>
+    </changeSet>
+
+
+
+    <changeSet id="4-create-chat-participants-table" author="Iana Makhonko">
+        <createTable tableName="chat_participants">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="chat_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="joined_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="chat_participants" baseColumnNames="user_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_participant_user"/>
+
+        <addForeignKeyConstraint baseTableName="chat_participants" baseColumnNames="chat_id"
+                                 referencedTableName="chats" referencedColumnNames="id"
+                                 constraintName="fk_participant_chat"/>
+    </changeSet>
+    <changeSet id="5-create-ai-assistant-table" author="Iana Makhonko">
+        <createTable tableName="ai_assistants">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="chat_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="behavior_profile" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="ai_assistants" baseColumnNames="chat_id"
+                                 referencedTableName="chats" referencedColumnNames="id"
+                                 constraintName="fk_ai_assistant_chat"/>
+    </changeSet>
+
+    <changeSet id="6-confirmation-code-table-creation" author="Iana Makhonko">
+        <createTable tableName="confirmation_codes">
+            <column name="code_id" type="bigserial" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="code" type="varchar">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expired_date_time" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="confirmation_codes" baseColumnNames="user_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_code_user"/>
+    </changeSet>
+</databaseChangeLog>
