@@ -15,9 +15,9 @@ import java.util.stream.Collectors;
 public class ChatDto {
     @Schema(description = "User ID", example = "1")
     private Long id;
-    @Schema(description = "User full name", example = "Max Musterman")
+    @Schema(description = "User full name", example = "Iana Makhonko")
     private String chatName;
-    @Schema(description = "e-mail", example = "m.musterman@gmx.de")
+    @Schema(description = "e-mail", example = "jana.M@mail.com")
     private String topic;
     @Schema(description = "User role", example = "USER")
     private String accessCode;

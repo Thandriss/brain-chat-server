@@ -2,13 +2,16 @@ package interestingideas.brainchatserver.service;
 
 import interestingideas.brainchatserver.config.RabbitConf;
 import interestingideas.brainchatserver.dto.ChatDto;
+import interestingideas.brainchatserver.dto.MessageDto;
 import interestingideas.brainchatserver.dto.UserDto;
 import interestingideas.brainchatserver.exception.RestException;
 import interestingideas.brainchatserver.model.Chat;
 import interestingideas.brainchatserver.model.ChatParticipants;
+import interestingideas.brainchatserver.model.Message;
 import interestingideas.brainchatserver.model.User;
 import interestingideas.brainchatserver.repository.ChatParticipantsRepository;
 import interestingideas.brainchatserver.repository.ChatsRepository;
+import interestingideas.brainchatserver.repository.MessagesRepository;
 import interestingideas.brainchatserver.repository.UsersRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +34,7 @@ public class GroupService {
     private final ChatsRepository chatsRepository;
     private final ChatParticipantsRepository chatParticipantsRepository;
     private final UsersRepository userRepository;
+    private final MessagesRepository messagesRepository;
 
     public List<ChatDto> getAllChats(Authentication authentication){
         System.out.println(authentication.getName());
@@ -64,9 +68,9 @@ public class GroupService {
         rabbitMQConfig.createExchange(accessCode);
         String queueName = "group_" + accessCode;
 //        + "_user_" + creator.getId()
-        rabbitMQConfig.createQueue(queueName);
+//        rabbitMQConfig.createQueue(queueName);
 //        + ".user." + creator.getId()
-        rabbitMQConfig.bindQueueToExchange(queueName, accessCode, "");
+//        rabbitMQConfig.bindQueueToExchange(queueName, accessCode, "");
 
         return accessCode;
     }
@@ -86,9 +90,11 @@ public class GroupService {
                             .build();
             chatParticipantsRepository.save(newMember);
 
-            String queueName = "group_" + group.getUuidChat();
+//            String queueName = "group_" + group.getUuidChat();
 //            + "_user_" + user.getId()
 //            rabbitMQConfig.createQueue(queueName);
+            String queueName = "user_" + user.getId() + "_group_" + group.getUuidChat();
+            rabbitMQConfig.createQueue(queueName);
             rabbitMQConfig.bindQueueToExchange(queueName, group.getUuidChat(), "");
         }
 
@@ -101,5 +107,15 @@ public class GroupService {
             }
         }
         return false;
+    }
+
+    public List<MessageDto> getAllMessages(String accessCode, Authentication authentication) {
+        if (authentication.isAuthenticated()) {
+            Chat group = chatsRepository.findByUuid(accessCode)
+                    .orElseThrow(() -> new RuntimeException("Chat not found"));
+            List<Message> result = messagesRepository.findByChatId(group.getId());
+            return MessageDto.from(result);
+        }
+        return null;
     }
 }

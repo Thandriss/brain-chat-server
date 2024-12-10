@@ -1,6 +1,8 @@
 package interestingideas.brainchatserver.controllers.api;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import interestingideas.brainchatserver.dto.ChatDto;
+import interestingideas.brainchatserver.dto.MessageDto;
 import interestingideas.brainchatserver.dto.UserDto;
 import interestingideas.brainchatserver.respreq.CreateChatRequest;
 import interestingideas.brainchatserver.respreq.JoinRequest;
@@ -33,9 +35,10 @@ public class ChatController {
     }
 
     @MessageMapping("/send")
-    @SendTo("/topic/messages")
-    public void sendMessageToGroup(@RequestBody SendMessageRequest request) {
-        messageProducer.sendMessage(request.getMessage(), request.getChatName());
+    @SendTo("/topic/group-messages")
+    public void sendMessageToGroup(@RequestBody SendMessageRequest request) throws JsonProcessingException {
+        System.out.println("sending");
+        messageProducer.sendMessage(request.getMessage(), request.getChatName(), request.getId(), request.getName());
     }
     @PostMapping("/join/{accessCode}")
     public ResponseEntity<ChatDto> joinGroup(@PathVariable("accessCode") String accessCode, Authentication authentication) {
@@ -48,9 +51,15 @@ public class ChatController {
         messageConsumerService.bindUserToChat(accessCode, authentication);
     }
 
+
     @GetMapping("/allChats")
     public List<ChatDto> getAllChats(Authentication authentication) {
         List<ChatDto> res = groupService.getAllChats(authentication);
+        return res;
+    }
+    @GetMapping("/getMessages/{accessCode}")
+    public List<MessageDto> getMessages(@PathVariable("accessCode") String accessCode, Authentication authentication) {
+        List<MessageDto> res = groupService.getAllMessages(accessCode, authentication);
         return res;
     }
 

@@ -29,13 +29,11 @@ public class MessageConsumerService {
 
     public void bindUserToChat(String accessCode, Authentication authentication) {
         User user = getByLogin(authentication.getName());
-        String queueName = accessCode;
-
-        // Declare the queue and bind it to the chat's fanout exchange
+        String queueName =  "user_" + user.getId() + "_group_" + accessCode;
         Queue queue = new Queue(queueName, true);
         rabbitAdmin.declareQueue(queue);
 
-        Binding binding = BindingBuilder.bind(queue).to(new FanoutExchange(queueName));
+        Binding binding = BindingBuilder.bind(queue).to(new FanoutExchange(accessCode));
         rabbitAdmin.declareBinding(binding);
     }
 
