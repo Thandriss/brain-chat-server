@@ -11,4 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CreateChatRequest {
     private String chatName;
+    private String topic;
+    private String prompt;
+    private String aiName;
+    private String time;
+    private Long numberParticipants;
 }

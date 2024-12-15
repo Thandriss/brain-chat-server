@@ -17,14 +17,19 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
-    @Column(name = "user_id")
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "user_id", nullable = true)
+    private User userId;
     @Column(name = "content")
     private String content;
     @Column(name = "timestamp")
     private LocalDateTime timestamp;
-    @Column(name = "chat_id")
-    private Long chatId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "chat_id", nullable = true)
+    private Chat chatId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "ai_id", nullable = true)
+    private AI aiId;
     @Column(name = "name")
     private String name;
 

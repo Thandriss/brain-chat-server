@@ -9,5 +9,5 @@ import java.util.Optional;
 
 public interface MessagesRepository extends JpaRepository<Message, Long> {
     @Query("select u from Message u where u.chatId = ?1")
-    List<Message> findByChatId(Long chatId);
+    List<Message> findByChatId(Chat chatId);
 }

@@ -27,16 +27,20 @@ public class MessageProducerService {
     private final RabbitTemplate rabbitTemplate;
     private final MessagesRepository messagesRepository;
     private final ChatsRepository chatRepository;
+    private final UsersRepository usersRepository;
 
     public void sendMessage(String message, String queueName, Long id, String name) throws JsonProcessingException {
         System.out.println("sending " + "group_" + queueName);
+        User user = usersRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));;
         Chat chat = chatRepository.findByUuid(queueName)
                 .orElseThrow(() -> new RuntimeException("Chat not found"));
         Message messageSave = Message.builder()
                         .content(message)
                         .timestamp(LocalDateTime.now())
-                        .userId(id)
-                        .chatId(chat.getId())
+                        .userId(user)
+                        .chatId(chat)
+                        .aiId(null)
                         .name(name)
                         .build();
         messagesRepository.save(messageSave);

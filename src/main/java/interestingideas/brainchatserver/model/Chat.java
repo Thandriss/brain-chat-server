@@ -13,6 +13,11 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "chats")
 public class Chat {
+
+    public enum Status {
+        DRAFT, ACTIVE, CANCELLED
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -25,4 +30,18 @@ public class Chat {
     private String UuidChat;
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+    @Column(name = "time")
+    private String time;
+    @Column(name = "status")
+    private Chat.Status status;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "admin_id", nullable = false)
+    private User adminId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ai_id", nullable = false)
+    private AI aiId;
+    @Column(name = "number_participants")
+    private Long numberParticipants;
+    @Column(name = "current_participants")
+    private Long currentParticipants;
 }

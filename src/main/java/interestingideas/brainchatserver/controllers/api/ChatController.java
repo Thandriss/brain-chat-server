@@ -4,9 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import interestingideas.brainchatserver.dto.ChatDto;
 import interestingideas.brainchatserver.dto.MessageDto;
 import interestingideas.brainchatserver.dto.UserDto;
-import interestingideas.brainchatserver.respreq.CreateChatRequest;
-import interestingideas.brainchatserver.respreq.JoinRequest;
-import interestingideas.brainchatserver.respreq.SendMessageRequest;
+import interestingideas.brainchatserver.respreq.*;
 import interestingideas.brainchatserver.service.GroupService;
 import interestingideas.brainchatserver.service.MessageConsumerService;
 import interestingideas.brainchatserver.service.MessageProducerService;
@@ -29,8 +27,8 @@ public class ChatController {
     private final MessageProducerService messageProducer;
     private final MessageConsumerService messageConsumerService;
     @PostMapping("/create")
-    public ResponseEntity<String> createGroup(@RequestBody CreateChatRequest request) {
-        String accessCode = groupService.createGroup(request.getChatName());
+    public ResponseEntity<String> createGroup(@RequestBody CreateChatRequest request, Authentication authentication) {
+        String accessCode = groupService.createGroup(request, authentication);
         return ResponseEntity.ok(accessCode);
     }
 
@@ -49,6 +47,18 @@ public class ChatController {
     @GetMapping("/bindToChat/{accessCode}")
     public void bindToChat(@PathVariable("accessCode") String accessCode, Authentication authentication) {
         messageConsumerService.bindUserToChat(accessCode, authentication);
+    }
+
+    @PostMapping("/getChatData")
+    public ResponseEntity<ChatDto> getChat( @RequestBody GetChatRequest request, Authentication authentication) {
+        ChatDto group = groupService.getChat(request);
+        return ResponseEntity.ok(group);
+    }
+
+    @GetMapping("/count/{accessCode}")
+    public ResponseEntity<BindingCountResp> getBindingsCount(@PathVariable("accessCode") String accessCode) {
+        int count = groupService.getBindingsCount(accessCode);
+        return ResponseEntity.ok(new BindingCountResp(count));
     }
 
 

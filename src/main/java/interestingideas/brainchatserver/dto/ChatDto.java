@@ -21,6 +21,8 @@ public class ChatDto {
     private String topic;
     @Schema(description = "User role", example = "USER")
     private String accessCode;
+    @Schema(description = "time in minutes and seconds", example = "22:30")
+    private String time;
 
     public static ChatDto from(Chat chat) {
         return ChatDto.builder()
@@ -28,6 +30,7 @@ public class ChatDto {
                 .chatName(chat.getChatName())
                 .topic(chat.getTopic())
                 .accessCode(chat.getUuidChat())
+                .time(chat.getTime())
                 .build();
     }
 

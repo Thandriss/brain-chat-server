@@ -29,6 +29,23 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="5-create-ai-assistant-table" author="Iana Makhonko">
+        <createTable tableName="ai_assistants">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="behavior_profile" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
     <changeSet id="3-create-chats-table" author="Iana Makhonko">
         <createTable tableName="chats">
             <column name="id" type="BIGINT" autoIncrement="true">
@@ -43,11 +60,38 @@
             <column name="uuid-chat" type="VARCHAR(1000)">
                 <constraints nullable="false"/>
             </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="time" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
             <column name="created_at" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
+            <column name="number_participants" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_participants" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="admin_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ai_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
+
+        <addForeignKeyConstraint baseTableName="chats" baseColumnNames="ai_id"
+                                 referencedTableName="ai_assistants" referencedColumnNames="id"
+                                 constraintName="fk_ai_chats"/>
+
+        <addForeignKeyConstraint baseTableName="chats" baseColumnNames="admin_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_user_chats"/>
     </changeSet>
+
 
     <changeSet id="2-create-messages-table" author="Iana Makhonko">
         <createTable tableName="messages">
@@ -55,7 +99,7 @@
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="user_id" type="BIGINT">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
             </column>
             <column name="content" type="TEXT">
                 <constraints nullable="false"/>
@@ -64,16 +108,17 @@
                 <constraints nullable="false"/>
             </column>
             <column name="chat_id" type="BIGINT">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
+            </column>
+            <column name="ai_id" type="BIGINT">
+                <constraints nullable="true"/>
             </column>
             <column name="name" type="VARCHAR(1000)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
 
-        <addForeignKeyConstraint baseTableName="messages" baseColumnNames="user_id"
-                                 referencedTableName="users" referencedColumnNames="id"
-                                 constraintName="fk_user_message"/>
+
         <addForeignKeyConstraint baseTableName="messages" baseColumnNames="chat_id"
                                  referencedTableName="chats" referencedColumnNames="id"
                                  constraintName="fk_chat_message"/>
@@ -105,29 +150,7 @@
                                  referencedTableName="chats" referencedColumnNames="id"
                                  constraintName="fk_participant_chat"/>
     </changeSet>
-    <changeSet id="5-create-ai-assistant-table" author="Iana Makhonko">
-        <createTable tableName="ai_assistants">
-            <column name="id" type="BIGINT" autoIncrement="true">
-                <constraints primaryKey="true" nullable="false"/>
-            </column>
-            <column name="chat_id" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="name" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="behavior_profile" type="TEXT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_at" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
 
-        <addForeignKeyConstraint baseTableName="ai_assistants" baseColumnNames="chat_id"
-                                 referencedTableName="chats" referencedColumnNames="id"
-                                 constraintName="fk_ai_assistant_chat"/>
-    </changeSet>
 
     <changeSet id="6-confirmation-code-table-creation" author="Iana Makhonko">
         <createTable tableName="confirmation_codes">

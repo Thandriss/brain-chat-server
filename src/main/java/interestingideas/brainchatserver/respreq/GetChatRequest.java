@@ -9,13 +9,6 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class AuthResponse {
-
-    private final String type = "Bearer";
-
-    private String accessToken;
-
-    private String refreshToken;
-
-    private Boolean adminToken;
+public class GetChatRequest {
+    private Long chatId;
 }

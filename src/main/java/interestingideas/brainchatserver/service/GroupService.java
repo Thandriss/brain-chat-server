@@ -3,23 +3,19 @@ package interestingideas.brainchatserver.service;
 import interestingideas.brainchatserver.config.RabbitConf;
 import interestingideas.brainchatserver.dto.ChatDto;
 import interestingideas.brainchatserver.dto.MessageDto;
-import interestingideas.brainchatserver.dto.UserDto;
 import interestingideas.brainchatserver.exception.RestException;
-import interestingideas.brainchatserver.model.Chat;
-import interestingideas.brainchatserver.model.ChatParticipants;
-import interestingideas.brainchatserver.model.Message;
-import interestingideas.brainchatserver.model.User;
-import interestingideas.brainchatserver.repository.ChatParticipantsRepository;
-import interestingideas.brainchatserver.repository.ChatsRepository;
-import interestingideas.brainchatserver.repository.MessagesRepository;
-import interestingideas.brainchatserver.repository.UsersRepository;
+import interestingideas.brainchatserver.model.*;
+import interestingideas.brainchatserver.repository.*;
+import interestingideas.brainchatserver.respreq.CreateChatRequest;
+import interestingideas.brainchatserver.respreq.GetChatRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,16 +31,22 @@ public class GroupService {
     private final ChatParticipantsRepository chatParticipantsRepository;
     private final UsersRepository userRepository;
     private final MessagesRepository messagesRepository;
+    private final AIRepository aiRepository;
+    private static final String RABBITMQ_API_URL = "http://localhost:15672/api/exchanges/%2F/{exchange}/bindings/source";
+    private static final String USERNAME = "guest";
+    private static final String PASSWORD = "guest";
 
     public List<ChatDto> getAllChats(Authentication authentication){
         System.out.println(authentication.getName());
         User user = getByLogin(authentication.getName());
-        List<ChatParticipants> allChatsWithPart = chatParticipantsRepository.findChatParticipantsById(user.getId());
+        List<ChatParticipants> allChatsWithPart = chatParticipantsRepository.findChatParticipantsById(user);
+        List<Chat> ownChats = chatsRepository.findByAdminId(user);
         List<Chat> res = new ArrayList<Chat>();
         for (ChatParticipants chatP: allChatsWithPart) {
-            Chat chat = chatsRepository.getReferenceById(chatP.getChatId());
+            Chat chat = chatsRepository.getReferenceById(chatP.getChatId().getId());
             res.add(chat);
         }
+        res.addAll(ownChats);
         return ChatDto.from(res);
     }
     public User getByLogin(String login) {
@@ -53,13 +55,26 @@ public class GroupService {
                         "User with login <" + login + "> not found"));
     }
     @Transactional
-    public String createGroup(String groupName) {
+    public String createGroup(CreateChatRequest request, Authentication authentication) {
+        User user = getByLogin(authentication.getName());
         String accessCode = RandomStringUtils.randomAlphanumeric(10).toUpperCase();
+        AI ai_assistant = AI.builder()
+                .prompt(request.getPrompt())
+                .createdAt(LocalDateTime.now())
+                .name(request.getAiName())
+                .build();
+        aiRepository.save(ai_assistant);
         Chat group = Chat.builder()
-                .chatName(groupName)
+                .chatName(request.getChatName())
                 .createdAt(LocalDateTime.now())
                 .UuidChat(accessCode)
-                .topic("")
+                .topic(request.getTopic())
+                .adminId(user)
+                .status(Chat.Status.DRAFT)
+                .aiId(ai_assistant)
+                .time(request.getTime())
+                .numberParticipants(request.getNumberParticipants())
+                .currentParticipants(1L)
                 .build();
 
         chatsRepository.save(group);
@@ -80,22 +95,24 @@ public class GroupService {
         User user = getByLogin(authentication.getName());
         Chat group = chatsRepository.findByUuid(accessCode)
                 .orElseThrow(() -> new RuntimeException("Chat not found"));
-        List<ChatParticipants> listOfUsers = chatParticipantsRepository.findByChatId(group.getId());
-
-        if (listOfUsers.size() < 5 && !checkUserInList(listOfUsers, user.getId())) {
-            ChatParticipants newMember = ChatParticipants.builder()
+        if (group.getCurrentParticipants()+1 <= group.getNumberParticipants()+1 || Objects.equals(group.getAdminId().getId(), user.getId())) {
+            Long curPart = group.getCurrentParticipants() + 1;
+            group.setCurrentParticipants(curPart);
+            chatsRepository.save(group);
+            List<ChatParticipants> listOfUsers = chatParticipantsRepository.findByChatId(group);
+            if (!checkUserInList(listOfUsers, user.getId())) {
+                if (!Objects.equals(group.getAdminId().getId(), user.getId())) {
+                    ChatParticipants newMember = ChatParticipants.builder()
                             .joinedAt(LocalDateTime.now())
-                            .chatId(group.getId())
-                            .userId(user.getId())
+                            .chatId(group)
+                            .userId(user)
                             .build();
-            chatParticipantsRepository.save(newMember);
-
-//            String queueName = "group_" + group.getUuidChat();
-//            + "_user_" + user.getId()
-//            rabbitMQConfig.createQueue(queueName);
-            String queueName = "user_" + user.getId() + "_group_" + group.getUuidChat();
-            rabbitMQConfig.createQueue(queueName);
-            rabbitMQConfig.bindQueueToExchange(queueName, group.getUuidChat(), "");
+                    chatParticipantsRepository.save(newMember);
+                }
+                String queueName = "user_" + user.getId() + "_group_" + group.getUuidChat();
+                rabbitMQConfig.createQueue(queueName);
+                rabbitMQConfig.bindQueueToExchange(queueName, group.getUuidChat(), "");
+            }
         }
 
         return ChatDto.from(group);
@@ -113,9 +130,34 @@ public class GroupService {
         if (authentication.isAuthenticated()) {
             Chat group = chatsRepository.findByUuid(accessCode)
                     .orElseThrow(() -> new RuntimeException("Chat not found"));
-            List<Message> result = messagesRepository.findByChatId(group.getId());
+            List<Message> result = messagesRepository.findByChatId(group);
             return MessageDto.from(result);
         }
         return null;
+    }
+
+    public ChatDto getChat(GetChatRequest request) {
+        Chat group = chatsRepository.findById(request.getChatId())
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+
+        return ChatDto.from(group);
+    }
+
+    public int getBindingsCount(String exchange) {
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBasicAuth(USERNAME, PASSWORD);
+
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<Object[]> response = restTemplate.exchange(
+                RABBITMQ_API_URL,
+                HttpMethod.GET,
+                entity,
+                Object[].class,
+                exchange
+        );
+
+        return response.getBody().length;
     }
 }
