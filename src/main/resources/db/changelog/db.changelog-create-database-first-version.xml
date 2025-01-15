@@ -66,6 +66,9 @@
             <column name="time" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>
+            <column name="end_at" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
             <column name="created_at" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>

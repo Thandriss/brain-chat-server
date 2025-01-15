@@ -30,6 +30,8 @@ public class Chat {
     private String UuidChat;
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+    @Column(name = "end_at")
+    private LocalDateTime endAt;
     @Column(name = "time")
     private String time;
     @Column(name = "status")

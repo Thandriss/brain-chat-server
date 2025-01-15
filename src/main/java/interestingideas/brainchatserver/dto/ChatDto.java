@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 @Builder
 @Schema(name = "Chat", description = "Chat")
 public class ChatDto {
-    @Schema(description = "User ID", example = "1")
+    @Schema(description = "chat ID", example = "1")
     private Long id;
     @Schema(description = "User full name", example = "Iana Makhonko")
     private String chatName;
@@ -21,8 +21,14 @@ public class ChatDto {
     private String topic;
     @Schema(description = "User role", example = "USER")
     private String accessCode;
+    @Schema(description = "State of the chat", example = "CANCELED")
+    private Chat.Status status;
     @Schema(description = "time in minutes and seconds", example = "22:30")
     private String time;
+    @Schema(description = "User ID", example = "1")
+    private Long ownerId;
+    @Schema(description = "ai ID", example = "1")
+    private Long aiId;
 
     public static ChatDto from(Chat chat) {
         return ChatDto.builder()
@@ -30,6 +36,9 @@ public class ChatDto {
                 .chatName(chat.getChatName())
                 .topic(chat.getTopic())
                 .accessCode(chat.getUuidChat())
+                .status(chat.getStatus())
+                .ownerId(chat.getAdminId().getId())
+                .aiId(chat.getAiId().getId())
                 .time(chat.getTime())
                 .build();
     }

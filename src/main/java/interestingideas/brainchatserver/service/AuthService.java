@@ -65,9 +65,6 @@ public class AuthService {
         confCodeRepository.save(toSaveCode);
         emailSender.send( senderEmail, request.getEmail(), "Confirmation code is: " + confCode);
         return UserDto.from(user);
-//        return AuthResponse.builder()
-//                .accessToken(jwtToken)
-//                .build();
     }
 
     @Transactional

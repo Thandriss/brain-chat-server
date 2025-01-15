@@ -17,21 +17,27 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @RequiredArgsConstructor
 @Service
-public class GroupService {
+public class ChatService {
     private final RabbitConf rabbitMQConfig;
     private final ChatsRepository chatsRepository;
     private final ChatParticipantsRepository chatParticipantsRepository;
     private final UsersRepository userRepository;
     private final MessagesRepository messagesRepository;
     private final AIRepository aiRepository;
+    private final ChatSessionManager chatSessionManager;
     private static final String RABBITMQ_API_URL = "http://localhost:15672/api/exchanges/%2F/{exchange}/bindings/source";
     private static final String USERNAME = "guest";
     private static final String PASSWORD = "guest";
@@ -55,7 +61,7 @@ public class GroupService {
                         "User with login <" + login + "> not found"));
     }
     @Transactional
-    public String createGroup(CreateChatRequest request, Authentication authentication) {
+    public String createChat(CreateChatRequest request, Authentication authentication) {
         User user = getByLogin(authentication.getName());
         String accessCode = RandomStringUtils.randomAlphanumeric(10).toUpperCase();
         AI ai_assistant = AI.builder()
@@ -73,13 +79,13 @@ public class GroupService {
                 .status(Chat.Status.DRAFT)
                 .aiId(ai_assistant)
                 .time(request.getTime())
+                .endAt(null)
                 .numberParticipants(request.getNumberParticipants())
                 .currentParticipants(1L)
                 .build();
 
         chatsRepository.save(group);
 
-        // RabbitMQ setup
         rabbitMQConfig.createExchange(accessCode);
         String queueName = "group_" + accessCode;
 //        + "_user_" + creator.getId()
@@ -91,7 +97,7 @@ public class GroupService {
     }
 
     @Transactional
-    public ChatDto joinGroup(String accessCode, Authentication authentication) {
+    public ChatDto joinChat(String accessCode, Authentication authentication) {
         User user = getByLogin(authentication.getName());
         Chat group = chatsRepository.findByUuid(accessCode)
                 .orElseThrow(() -> new RuntimeException("Chat not found"));
@@ -136,28 +142,126 @@ public class GroupService {
         return null;
     }
 
+    public List<MessageDto> getAllMessages(String accessCode) {
+        Chat group = chatsRepository.findByUuid(accessCode)
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+        List<Message> result = messagesRepository.findByChatId(group);
+        return MessageDto.from(result);
+    }
+
     public ChatDto getChat(GetChatRequest request) {
-        Chat group = chatsRepository.findById(request.getChatId())
+        Chat chat = chatsRepository.findById(request.getChatId())
                 .orElseThrow(() -> new RuntimeException("Chat not found"));
 
-        return ChatDto.from(group);
+        return ChatDto.from(chat);
+    }
+
+    public ChatDto closeChat(GetChatRequest request) {
+        System.out.println("Closing " + request.getChatId());
+        Chat chat = chatsRepository.findById(request.getChatId())
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+        chat.setStatus(Chat.Status.CANCELLED);
+        chatSessionManager.endSession(request.getChatId());
+        chatsRepository.save(chat);
+        return ChatDto.from(chat);
+    }
+
+    public ChatDto openChat(GetChatRequest request) {
+        Chat chat = chatsRepository.findById(request.getChatId())
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+        if (chat.getStatus().equals(Chat.Status.DRAFT)) {
+            System.out.println("Opening " + request.getChatId());
+            chat.setStatus(Chat.Status.ACTIVE);
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime newNow = LocalDateTime.now();
+            String[] timeParts = chat.getTime().split(":");
+            int minutes = Integer.parseInt(timeParts[0]);
+            int seconds = Integer.parseInt(timeParts[1]);
+            LocalDateTime updatedTime = newNow.plusMinutes(minutes).plusSeconds(seconds);
+            chat.setEndAt(updatedTime);
+            chatSessionManager.startSession(request.getChatId(), now);
+            chat = chatsRepository.save(chat);
+        }
+
+        return ChatDto.from(chat);
+    }
+    public String getTime(GetChatRequest request) {
+        Chat chat = chatsRepository.findById(request.getChatId())
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+        LocalDateTime now = LocalDateTime.now();
+        Duration timeRemaining = Duration.between(now, chat.getEndAt());
+        long minutes = timeRemaining.toMinutes();
+        long seconds = timeRemaining.minusMinutes(minutes).getSeconds();
+        String formattedTime = String.format("%02d:%02d", minutes, seconds);
+        return formattedTime;
     }
 
     public int getBindingsCount(String exchange) {
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBasicAuth(USERNAME, PASSWORD);
+        HttpURLConnection connection = null;
+        try {
 
-        HttpEntity<String> entity = new HttpEntity<>(headers);
+            URL url = new URL("http://localhost:15672/api/exchanges/%2F/" + exchange  + "/bindings/source");
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Content-Type",
+                    "application/x-www-form-urlencoded");
 
-        ResponseEntity<Object[]> response = restTemplate.exchange(
-                RABBITMQ_API_URL,
-                HttpMethod.GET,
-                entity,
-                Object[].class,
-                exchange
-        );
+            connection.setRequestProperty("Content-Language", "en-US");
+            String userpass =   "guest:guest";
+            String basicAuth = "Basic " + new String(Base64.getEncoder().encode(userpass.getBytes()));
+            connection.setRequestProperty ("Authorization", basicAuth);
 
-        return response.getBody().length;
+            connection.setUseCaches(false);
+            connection.setDoOutput(true);
+
+            InputStream is = connection.getInputStream();
+            BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+            ArrayList<String> response = new ArrayList<>();
+            String line;
+            while ((line = rd.readLine()) != null) {
+                response.add(line);
+            }
+            rd.close();
+
+            System.out.println(response.size());
+            return response.size();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+//        System.out.println(exchange);
+//        RestTemplate restTemplate = new RestTemplate();
+//        HttpHeaders headers = new HttpHeaders();
+////        headers.setBasicAuth(USERNAME, PASSWORD);
+//        headers.set("Accept", "application/json");
+//        headers.setBasicAuth(USERNAME, PASSWORD);
+//
+//        HttpEntity<String> entity = new HttpEntity<>(headers);
+//
+//        ResponseEntity<Object[]> response = restTemplate.exchange(
+//                "http://localhost:15672/api/exchanges/%2F/SJQDW5FXR2/bindings/source",
+//                HttpMethod.GET,
+//                entity,
+//                Object[].class
+//        );
+//        System.out.println("Response Code: " + response.getStatusCode());
+//        System.out.println(Arrays.toString(response.getBody()));
+//        return Objects.requireNonNull(response.getBody()).length;
+        return 0;
+    }
+
+    public void endSession(Long chatId) {
+        ConcurrentHashMap<Long, LocalDateTime> activeSessions = chatSessionManager.getAllChatActivities();
+        if (activeSessions.containsKey(chatId)) {
+            Chat chat = chatsRepository.findById(chatId).orElseThrow(() -> new RuntimeException("Chat not found"));
+            chat.setStatus(Chat.Status.CANCELLED);
+            chatsRepository.save(chat);
+            chatSessionManager.endSession(chatId);
+        }
     }
 }
