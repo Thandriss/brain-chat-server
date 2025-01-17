@@ -16,6 +16,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,7 +27,9 @@ public class AIService {
     private final MessagesRepository messagesRepository;
     private final ChatService groupService;
     String baseUrl = "https://api.openai.com/v1/chat/completions";
-    String apiKey = "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";
+
+    @Value("${ai.key}")
+    private String apiKey;
 
 
     public String generateAIMessage (Long ai_id, String accessCode) {
