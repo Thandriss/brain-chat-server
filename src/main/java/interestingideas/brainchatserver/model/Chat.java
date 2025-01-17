@@ -46,4 +46,9 @@ public class Chat {
     private Long numberParticipants;
     @Column(name = "current_participants")
     private Long currentParticipants;
+    @Column(name = "mode")
+    private String mode;
+    @Column(name = "anonymity")
+    private boolean anonymity;
+
 }

@@ -82,6 +82,8 @@ public class ChatService {
                 .endAt(null)
                 .numberParticipants(request.getNumberParticipants())
                 .currentParticipants(1L)
+                .anonymity(request.isAnonymity())
+                .mode(request.getMode())
                 .build();
 
         chatsRepository.save(group);

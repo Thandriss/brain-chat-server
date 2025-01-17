@@ -31,12 +31,12 @@ public class InactivityChecker {
                 Chat chat = chatsRepository.findById(chatId).orElseThrow(() -> new RuntimeException("Chat not found"));
                 System.out.println("AI ID      " + chat.getAiId().getId());
                 Long ai_id = chat.getAiId().getId();
-//                String aiMessage = aiService.generateAIMessage(ai_id, chat.getUuidChat());
-//                try {
-//                    messageProducerService.sendAIMessage(aiMessage, chat.getUuidChat(), ai_id);
-//                } catch (JsonProcessingException e) {
-//                    throw new RuntimeException(e);
-//                }
+                String aiMessage = aiService.generateAIMessage(ai_id, chat.getUuidChat());
+                try {
+                    messageProducerService.sendAIMessage(aiMessage, chat.getUuidChat(), ai_id);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
             }
         });
     }

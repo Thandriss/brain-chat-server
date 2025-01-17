@@ -29,6 +29,10 @@ public class ChatDto {
     private Long ownerId;
     @Schema(description = "ai ID", example = "1")
     private Long aiId;
+    @Schema(description = "anonymity", example = "1")
+    private boolean anonymity;
+    @Schema(description = "mode", example = "brainstorming")
+    private String mode;
 
     public static ChatDto from(Chat chat) {
         return ChatDto.builder()
@@ -40,6 +44,8 @@ public class ChatDto {
                 .ownerId(chat.getAdminId().getId())
                 .aiId(chat.getAiId().getId())
                 .time(chat.getTime())
+                .anonymity(chat.isAnonymity())
+                .mode(chat.getMode())
                 .build();
     }
 
