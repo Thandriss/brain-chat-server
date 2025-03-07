@@ -2,6 +2,7 @@ package interestingideas.brainchatserver.service;
 
 import interestingideas.brainchatserver.dto.MessageDto;
 import interestingideas.brainchatserver.model.AI;
+import interestingideas.brainchatserver.model.Chat;
 import interestingideas.brainchatserver.repository.AIRepository;
 import interestingideas.brainchatserver.repository.ChatsRepository;
 import interestingideas.brainchatserver.repository.MessagesRepository;
@@ -14,6 +15,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +28,7 @@ public class AIService {
     private final ChatsRepository chatRepository;
     private final MessagesRepository messagesRepository;
     private final ChatService groupService;
+    private final ChatSessionManager chatSessionManager;
     String baseUrl = "https://api.openai.com/v1/chat/completions";
 
     @Value("${ai.key}")
@@ -43,11 +46,16 @@ public class AIService {
 
             JSONArray messages = new JSONArray();
             AI ai = aiRepository.findById(ai_id).orElseThrow(() -> new RuntimeException("AI not found"));
-            messages.put(new JSONObject().put("role", "system").put("content", ai.getPrompt()));
+            Chat chat = chatRepository.findByUuid(accessCode).orElseThrow(() -> new RuntimeException("Chat not found"));
+            messages.put(new JSONObject().put("role", "system").put("content", ai.getPrompt() + " Topic: " + chat.getTopic() + " Mode " + chat.getMode() + "If someone makes an off-topic comment in chat, redirect them or admonish them."));
             List<MessageDto> messageDtoList = groupService.getAllMessages(accessCode);
             if (!messageDtoList.isEmpty()) {
                 for (MessageDto messageDto: messageDtoList) {
-                    messages.put(new JSONObject().put("role", "user").put("content", messageDto.getText()));
+                    if (messageDto.getAiId() == null) {
+                        messages.put(new JSONObject().put("role", "user").put("content", messageDto.getText()));
+                    } else  {
+                        messages.put(new JSONObject().put("role", "user").put("content", messageDto.getText() + " " + "Not respond on this message. It is your idea"));
+                    }
                 }
             }
             requestBody.put("messages", messages);
@@ -67,6 +75,8 @@ public class AIService {
                 JSONObject jsonResponse = new JSONObject(response.body());
                 JSONObject choice = jsonResponse.getJSONArray("choices").getJSONObject(0);
                 String content = choice.getJSONObject("message").getString("content");
+                LocalDateTime now = LocalDateTime.now();
+                chatSessionManager.startSession(chat.getId(), now);
                 System.out.println(content);
                 return content;
             } else {

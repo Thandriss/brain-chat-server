@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Random;
 
 @Component
 @RequiredArgsConstructor
@@ -26,7 +27,12 @@ public class InactivityChecker {
             System.out.println("chatId " + chatId);
             System.out.println("Duration "+Duration.between(lastMessageTime, now).toSeconds());
             System.out.println("Is chat active " + chatSessionManager.isSessionActive(chatId));
-            if (Duration.between(lastMessageTime, now).toSeconds() >= 15) {
+            int min = 15;
+            int max = 35;
+            Random rand = new Random();
+            int seconds = rand.nextInt(max - min + 1) + min;
+            System.out.println("seconds " + seconds);
+            if (Duration.between(lastMessageTime, now).toSeconds() >= seconds) {
                 System.out.println("here");
                 Chat chat = chatsRepository.findById(chatId).orElseThrow(() -> new RuntimeException("Chat not found"));
                 System.out.println("AI ID      " + chat.getAiId().getId());

@@ -70,6 +70,10 @@ public class ChatService {
                 .name(request.getAiName())
                 .build();
         aiRepository.save(ai_assistant);
+        boolean flag = false;
+        if (request.getAnonymity() == "yes") {
+         flag = true;
+        }
         Chat group = Chat.builder()
                 .chatName(request.getChatName())
                 .createdAt(LocalDateTime.now())
@@ -81,8 +85,8 @@ public class ChatService {
                 .time(request.getTime())
                 .endAt(null)
                 .numberParticipants(request.getNumberParticipants())
-                .currentParticipants(1L)
-                .anonymity(request.isAnonymity())
+                .currentParticipants(0L)
+                .anonymity(flag)
                 .mode(request.getMode())
                 .build();
 

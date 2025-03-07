@@ -23,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,6 +46,14 @@ public class AuthService {
     private final Map<String, String> refreshStorage = new HashMap<>();
     private final Map<String, Boolean> adminStorage = new HashMap<>();
     private final EmailSender emailSender;
+
+    private static final String UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
+    private static final String DIGITS = "0123456789";
+    private static final String SPECIALS = "!@#$%^&*()-_=+";
+    private static final String ALL_CHARACTERS = UPPERCASE + LOWERCASE + DIGITS + SPECIALS;
+    private static final int PASSWORD_LENGTH = 8;
+    private static final SecureRandom random = new SecureRandom();
     @Transactional
     public UserDto register(RegisterRequest request) {
         User user = User.builder()
@@ -114,6 +123,44 @@ public class AuthService {
         } else {
             throw new RestException(HttpStatus.UNAUTHORIZED, "Wrong password");
         }
+    }
+
+    public void reset(@NonNull AuthRequest authRequest) throws RestException {
+        final User user = userRepository.findByEmail(authRequest.getEmail()).orElseThrow();
+        String password = generatePassword();
+        user.setHashPassword(passwordEncoder.encode(password));
+        emailSender.send( senderEmail, authRequest.getEmail(), "New password is: " + password);
+        userRepository.save(user);
+    }
+
+    public static String generatePassword() {
+        StringBuilder password = new StringBuilder();
+
+        password.append(getRandomChar(UPPERCASE));
+        password.append(getRandomChar(LOWERCASE));
+        password.append(getRandomChar(DIGITS));
+        password.append(getRandomChar(SPECIALS));
+
+        for (int i = 4; i < PASSWORD_LENGTH; i++) {
+            password.append(getRandomChar(ALL_CHARACTERS));
+        }
+
+        return shuffleString(password.toString());
+    }
+
+    private static char getRandomChar(String source) {
+        return source.charAt(random.nextInt(source.length()));
+    }
+
+    private static String shuffleString(String input) {
+        char[] characters = input.toCharArray();
+        for (int i = characters.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char temp = characters[i];
+            characters[i] = characters[j];
+            characters[j] = temp;
+        }
+        return new String(characters);
     }
 
     private String getNewConfirmationCode() {

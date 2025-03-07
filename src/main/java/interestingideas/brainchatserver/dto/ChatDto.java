@@ -29,6 +29,8 @@ public class ChatDto {
     private Long ownerId;
     @Schema(description = "ai ID", example = "1")
     private Long aiId;
+    @Schema(description = "need number of participants", example = "1")
+    private Long participants;
     @Schema(description = "anonymity", example = "1")
     private boolean anonymity;
     @Schema(description = "mode", example = "brainstorming")

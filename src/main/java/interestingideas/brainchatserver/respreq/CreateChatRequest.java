@@ -16,6 +16,6 @@ public class CreateChatRequest {
     private String aiName;
     private String time;
     private Long numberParticipants;
-    private boolean anonymity;
+    private String anonymity;
     private String mode;
 }
