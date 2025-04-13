@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.NonNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +22,7 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    private  static final String SECRET_KEY = "077c66cab0743d12ae5368c6225fdb6171ceb81de7284e62f8a16b542c5e14d6f4bc2fc3319926166432f905e513155afa155ebd9bfa9f6debed59ef1ee89c9cfe100456ffe38175205e13403433ca92fef6e25fe4e6f8977555074f586765d29bbca780170a17fb0d76efc8cafff995ccaa240deb3e43daeafe04c45c26cb85aeadb08177066851b7f7ab4fa34fc82ca3298bd32bd4a1674006612b329781e18bd97ad4906ceef672434f97d872a31cc62e5e68cabfbec4529e61ad3ce4779c7c5a5249ff585fde5d7f8be644e13166e0100dc6085b84dba2acb11c5ecb0613823934860a18434b4ae23ff474036f876563bff9d89ed9aea5441d976004ce15";
+    private final String jwtAccessSecret;
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -29,6 +30,12 @@ public class JwtService {
     public <T> T extractClaim (String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
+    }
+
+    public JwtService(
+            @Value("${jwt.secret.access}") String jwtAccessSecret
+    ) {
+        this.jwtAccessSecret = jwtAccessSecret;
     }
 
     public String generateToken(UserDetails userDetails) {
@@ -39,7 +46,7 @@ public class JwtService {
                 .claims(claims)
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 24))
+                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24))
                 .signWith(getSignInKey())
                 .compact();
     }
@@ -48,7 +55,7 @@ public class JwtService {
         final LocalDateTime now = LocalDateTime.now();
         final Instant refreshExpirationInstant = now.plusDays(30).atZone(ZoneId.systemDefault()).toInstant();
         final Date refreshExpiration = Date.from(refreshExpirationInstant);
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
+        byte[] keyBytes = Decoders.BASE64.decode(jwtAccessSecret);
         Key secretRefrashKey =  Keys.hmacShaKeyFor(keyBytes);
         return Jwts.builder()
                 .setSubject(user.getEmail())
@@ -80,7 +87,7 @@ public class JwtService {
     }
 
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
+        byte[] keyBytes = Decoders.BASE64.decode(jwtAccessSecret);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

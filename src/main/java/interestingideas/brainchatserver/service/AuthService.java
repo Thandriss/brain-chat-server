@@ -13,6 +13,7 @@ import interestingideas.brainchatserver.repository.UsersRepository;
 import interestingideas.brainchatserver.respreq.AuthRequest;
 import interestingideas.brainchatserver.respreq.AuthResponse;
 import interestingideas.brainchatserver.respreq.RegisterRequest;
+import interestingideas.brainchatserver.respreq.ResetRequest;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,8 +34,6 @@ import java.util.Random;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-//    @Value("${spring.mail.password}")
-//    private String sendGridKey;
     @Value("${spring.mail.sender}")
     private String senderEmail;
 
@@ -56,6 +55,8 @@ public class AuthService {
     private static final SecureRandom random = new SecureRandom();
     @Transactional
     public UserDto register(RegisterRequest request) {
+        System.out.println("HERE");
+        System.out.println(senderEmail);
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
@@ -72,7 +73,7 @@ public class AuthService {
                 .expiredDateTime(LocalDateTime.now().plusDays(1))
                 .build();
         confCodeRepository.save(toSaveCode);
-        emailSender.send( senderEmail, request.getEmail(), "Confirmation code is: " + confCode);
+        emailSender.send( senderEmail, request.getEmail(), "Confirmation code is: " + confCode, "Confirm your email");
         return UserDto.from(user);
     }
 
@@ -125,11 +126,19 @@ public class AuthService {
         }
     }
 
-    public void reset(@NonNull AuthRequest authRequest) throws RestException {
+    public UserDto getUser (@NonNull AuthRequest authRequest) {
         final User user = userRepository.findByEmail(authRequest.getEmail()).orElseThrow();
+        return UserDto.from(user);
+    }
+
+
+
+    @Transactional
+    public void reset(ResetRequest resetRequest) throws RestException {
+        final User user = userRepository.findByEmail(resetRequest.getEmail()).orElseThrow();
         String password = generatePassword();
         user.setHashPassword(passwordEncoder.encode(password));
-        emailSender.send( senderEmail, authRequest.getEmail(), "New password is: " + password);
+        emailSender.send(senderEmail, resetRequest.getEmail(), "New password is: " + password, "New password");
         userRepository.save(user);
     }
 

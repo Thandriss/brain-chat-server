@@ -1,5 +1,6 @@
 package interestingideas.brainchatserver.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import interestingideas.brainchatserver.config.RabbitConf;
 import interestingideas.brainchatserver.dto.ChatDto;
 import interestingideas.brainchatserver.dto.MessageDto;
@@ -8,9 +9,14 @@ import interestingideas.brainchatserver.model.*;
 import interestingideas.brainchatserver.repository.*;
 import interestingideas.brainchatserver.respreq.CreateChatRequest;
 import interestingideas.brainchatserver.respreq.GetChatRequest;
+
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -93,7 +99,7 @@ public class ChatService {
         chatsRepository.save(group);
 
         rabbitMQConfig.createExchange(accessCode);
-        String queueName = "group_" + accessCode;
+//        String queueName = "group_" + accessCode;
 //        + "_user_" + creator.getId()
 //        rabbitMQConfig.createQueue(queueName);
 //        + ".user." + creator.getId()
@@ -172,6 +178,18 @@ public class ChatService {
         return ChatDto.from(chat);
     }
 
+    @Cacheable(value = "chatCache", key = "#id")
+    public Chat findByIdCached(Long id) {
+        return chatsRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+    }
+
+    @Cacheable(value = "chatByUuidCache", key = "#accessCode")
+    public Chat findByUuidCached(String accessCode) {
+        return chatsRepository.findByUuid(accessCode)
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+    }
+
     public ChatDto openChat(GetChatRequest request) {
         Chat chat = chatsRepository.findById(request.getChatId())
                 .orElseThrow(() -> new RuntimeException("Chat not found"));
@@ -217,20 +235,11 @@ public class ChatService {
             String basicAuth = "Basic " + new String(Base64.getEncoder().encode(userpass.getBytes()));
             connection.setRequestProperty ("Authorization", basicAuth);
 
-            connection.setUseCaches(false);
-            connection.setDoOutput(true);
 
             InputStream is = connection.getInputStream();
-            BufferedReader rd = new BufferedReader(new InputStreamReader(is));
-            ArrayList<String> response = new ArrayList<>();
-            String line;
-            while ((line = rd.readLine()) != null) {
-                response.add(line);
-            }
-            rd.close();
-
-            System.out.println(response.size());
-            return response.size();
+            ObjectMapper mapper = new ObjectMapper();
+            List<Object> jsonList = mapper.readValue(is, List.class);
+            return jsonList.size();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -240,24 +249,6 @@ public class ChatService {
                 connection.disconnect();
             }
         }
-//        System.out.println(exchange);
-//        RestTemplate restTemplate = new RestTemplate();
-//        HttpHeaders headers = new HttpHeaders();
-////        headers.setBasicAuth(USERNAME, PASSWORD);
-//        headers.set("Accept", "application/json");
-//        headers.setBasicAuth(USERNAME, PASSWORD);
-//
-//        HttpEntity<String> entity = new HttpEntity<>(headers);
-//
-//        ResponseEntity<Object[]> response = restTemplate.exchange(
-//                "http://localhost:15672/api/exchanges/%2F/SJQDW5FXR2/bindings/source",
-//                HttpMethod.GET,
-//                entity,
-//                Object[].class
-//        );
-//        System.out.println("Response Code: " + response.getStatusCode());
-//        System.out.println(Arrays.toString(response.getBody()));
-//        return Objects.requireNonNull(response.getBody()).length;
         return 0;
     }
 

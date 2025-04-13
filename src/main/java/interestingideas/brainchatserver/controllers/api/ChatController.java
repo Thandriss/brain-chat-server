@@ -78,10 +78,10 @@ public class ChatController {
     }
 
 //    endSession not need
-    @PostMapping("/endSession")
-    public void endChat( @RequestBody GetChatRequest request, Authentication authentication) {
-        chatService.endSession(request.getChatId());
-    }
+//    @PostMapping("/endSession")
+//    public void endChat( @RequestBody GetChatRequest request, Authentication authentication) {
+//        chatService.endSession(request.getChatId());
+//    }
 
     @GetMapping("/allChats")
     public List<ChatDto> getAllChats(Authentication authentication) {

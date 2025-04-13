@@ -5,6 +5,7 @@ import interestingideas.brainchatserver.dto.UserDto;
 import interestingideas.brainchatserver.respreq.AuthRequest;
 import interestingideas.brainchatserver.respreq.AuthResponse;
 import interestingideas.brainchatserver.respreq.RegisterRequest;
+import interestingideas.brainchatserver.respreq.ResetRequest;
 import interestingideas.brainchatserver.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,8 +39,13 @@ public class AuthController {
         return ResponseEntity.ok(authService.authenticate(request));
     }
 
-    @PutMapping("/reset")
-    public void reset (@RequestBody AuthRequest request) {
+    @PostMapping("/user")
+    public UserDto getUser (@RequestBody AuthRequest request) {
+        return authService.getUser(request);
+    }
+
+    @PostMapping("/reset")
+    public void reset (@RequestBody ResetRequest request) {
         authService.reset(request);
     }
 }

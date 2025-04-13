@@ -23,10 +23,10 @@ import java.util.Properties;
 public class ApplicationConf {
 
     private final UsersRepository usersRepository;
-    @Value("${mail.sender.username}")
-    private String mailSenderUsername;
     @Value("${mail.sender.password}")
     private String mailSenderPassword;
+    @Value("${spring.mail.sender}")
+    private String mailSenderEmail;
     @Value("${mail.sender.host}")
     private String mailSenderHost;
     @Value("${mail.sender.protocol}")
@@ -71,7 +71,7 @@ public class ApplicationConf {
         mailSender.setHost(mailSenderHost);
         mailSender.setPort(mailSenderPort);
 
-        mailSender.setUsername(mailSenderUsername);
+        mailSender.setUsername(mailSenderEmail);
         mailSender.setPassword(mailSenderPassword);
 
         Properties props = mailSender.getJavaMailProperties();
@@ -79,7 +79,9 @@ public class ApplicationConf {
         props.put("mail.sender.smtp.auth", mailSenderSmtpAuth);
         props.put("mail.sender.smtp.starttls.enable", mailSenderSmtpStartTlsEnable);
         props.put("mail.sender.debug", mailSenderMailDebug);
+        props.put("mail.smtp.starttls.required", "true");
 
+        mailSender.setJavaMailProperties(props);
         return mailSender;
     }
 

@@ -46,6 +46,7 @@ public class ChatDto {
                 .ownerId(chat.getAdminId().getId())
                 .aiId(chat.getAiId().getId())
                 .time(chat.getTime())
+                .participants((chat.getNumberParticipants()))
                 .anonymity(chat.isAnonymity())
                 .mode(chat.getMode())
                 .build();

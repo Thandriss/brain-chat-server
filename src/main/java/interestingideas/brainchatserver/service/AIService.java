@@ -19,16 +19,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class AIService {
     private final AIRepository aiRepository;
-    private final ChatsRepository chatRepository;
-    private final MessagesRepository messagesRepository;
+    private final AiCached aicached;
     private final ChatService groupService;
     private final ChatSessionManager chatSessionManager;
+    private final ChatService chatService;
     String baseUrl = "https://api.openai.com/v1/chat/completions";
 
     @Value("${ai.key}")
@@ -45,8 +46,8 @@ public class AIService {
             requestBody.put("max_completion_tokens", 256);
 
             JSONArray messages = new JSONArray();
-            AI ai = aiRepository.findById(ai_id).orElseThrow(() -> new RuntimeException("AI not found"));
-            Chat chat = chatRepository.findByUuid(accessCode).orElseThrow(() -> new RuntimeException("Chat not found"));
+            AI ai = aicached.findByIdCached(ai_id);
+            Chat chat = chatService.findByUuidCached(accessCode);
             messages.put(new JSONObject().put("role", "system").put("content", ai.getPrompt() + " Topic: " + chat.getTopic() + " Mode " + chat.getMode() + "If someone makes an off-topic comment in chat, redirect them or admonish them."));
             List<MessageDto> messageDtoList = groupService.getAllMessages(accessCode);
             if (!messageDtoList.isEmpty()) {
@@ -54,7 +55,7 @@ public class AIService {
                     if (messageDto.getAiId() == null) {
                         messages.put(new JSONObject().put("role", "user").put("content", messageDto.getText()));
                     } else  {
-                        messages.put(new JSONObject().put("role", "user").put("content", messageDto.getText() + " " + "Not respond on this message. It is your idea"));
+                        messages.put(new JSONObject().put("role", "assistant").put("content", messageDto.getText() + " " + "Not respond on this message. It is your idea"));
                     }
                 }
             }
@@ -90,14 +91,16 @@ public class AIService {
         return null;
     }
 
+    @CacheEvict(value = "aiByIdCache", key = "#aiId")
     public String changeAIPrompt(Long aiId, String text) {
         AI ai = aiRepository.findById(aiId).orElseThrow(() -> new RuntimeException("AI not found"));
         ai.setPrompt(text);
         aiRepository.save(ai);
         return text;
     }
+
     public String getAIPrompt(Long aiId) {
-        AI ai = aiRepository.findById(aiId).orElseThrow(() -> new RuntimeException("AI not found"));
+        AI ai = aicached.findByIdCached(aiId);
         return ai.getPrompt();
     }
 }
