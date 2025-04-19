@@ -19,6 +19,7 @@ public class InactivityChecker {
     private final ChatSessionManager chatSessionManager;
     private final AIService aiService;
     private final MessageProducerService messageProducerService;
+    private final Random rand = new Random();
 
 
     @Scheduled(fixedDelay = 10000)
@@ -28,7 +29,7 @@ public class InactivityChecker {
         if (!chatSessionManager.getAllChatActivities().isEmpty()) {
             chatSessionManager.getAllChatActivities().forEach((chatId, lastMessageTime) -> {
                 log.info("Chat ID: {}, Last Activity: {}", chatId, lastMessageTime);
-                int threshold = chatSessionManager.getThreshold(chatId);
+                int threshold = rand.nextInt(21) + 20;
                 if (Duration.between(lastMessageTime, now).toSeconds() >= threshold) {
                     Chat chat = chatService.findByIdCached(chatId);
                     Long ai_id = chat.getAiId().getId();
